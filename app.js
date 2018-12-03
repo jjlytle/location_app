@@ -1,74 +1,54 @@
-var fs = require('fs');
-var parse = require('csv-parse');
-var async = require('async');
-var inputFile='./data/run1.csv';
+
+
 var MongoClient = require('mongodb').MongoClient
 var assert = require('assert');
 
-// Connection FOR LOCAL server use first
-//var access = 'mongodb://localhost:27017/location_app';
-var access = "mongodb+srv://jjlytle:test123@cluster0-suini.mongodb.net/test?retryWrites=true";
+var dbname          = 'location_data';
+var collectionName  = 'table1';
+var access 			= "mongodb+srv://jjlytle:test123@cluster0-suini.mongodb.net/test?retryWrites=true";
+var acesssLocal     = 'mongodb://localhost:27017/'+dbname;
+var filename        = './data/run1.csv';
+console.log('***************Process started');
 
 MongoClient.connect(access, {useNewUrlParser : true}, function(err, client) {
-	if (err) throw err;
-	const collection = client.db("location_data").collection("table1");
-	var myobj = { name: "Cheif RedShirt", location: {type: "Point", coordinates: [40, 35]} };
-	collection.insertOne(myobj);
-	collection.createIndex({location : "2dsphere"}, function(err, res) {
-			if (err) throw err;
-			console.log("created index")
+	if (err) {
+		console.log('error on connection '+err);
+	}
+	else{
+		console.log('***************Successfully connected to mongodb');
+		const collection = client.db("location_data").collection("table1");
+		var fs          = require('fs');
+		var readline    = require('readline');
+		var stream      = require('stream');
+		var instream    = fs.createReadStream(filename);
+		var outstream   = new stream;
+		var rl          = readline.createInterface(instream,outstream);
+
+		console.log('***************Parsing, please wait ...');
+
+		rl.on('line',function(line){
+			try{
+				var arr         = line.split(',');
+				var myobj = 
+					{ 
+						name: "Cheif RedShirt", 
+						location: { type: "Point", coordinates: [ parseFloat(arr[0]), parseFloat(arr[1]) ] } 
+					};
+				collection.insertOne(myobj);
+				//var res = collection.insert(object);
+			}
+			catch (err){
+				console.log(err);
+			}
 		});
 
-	client.close();
-});
-
-var promise1 = new Promise(function(resolve, reject) {
-	resolve(
-	MongoClient.connect(access, {useNewUrlParser : true}, 
-		function(err, client) 
-		{
-			if (err) throw err;
-			const collection = client.db("location_data").collection("table1");
-			var myobj = 
-				{ 
-				name: "Cheif RedShirt", 
-				location: {type: "Point", coordinates: } 
-				};
-			collection.insertOne(myobj);
-		client.close();
-		}
-	)
-	);
-});
-
-promise1.then(function(value) {
-	console.log(value);
-	// expected output: "Success!"
-});
-
-var parser = parse({delimiter: ','}, function (err, data) {
-	async.eachSeries(data, function (line, callback) {
-		promise1.then(function() {
-			console.log(line);
-			
-			callback();
+		rl.on('close',function(){
+			client.close();
+			console.log('***************completed');
 		});
-	})
+	}
 });
-fs.createReadStream(inputFile).pipe(parser);
 
-//var parser = parse({delimiter: ','}, function (err, data) {
-//	async.eachSeries(data, function (line, callback) {
-//		var myobj = { name: "Cheif RedShirt", location: {type: "Point", coordinates: [data[0], data[1]]} };
-//		collection.insertOne( myobj ).then(function() {
-//			console.log(data);
-//			console.log(line);
-//			callback();
-//		});
-//	})
-//});
-//fs.createReadStream(inputFile).pipe(parser);
-//
 //let gpsToFeet = (geoJSONobject) => {
 //	statements
 //}
