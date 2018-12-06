@@ -1,17 +1,27 @@
 
-
 var MongoClient = require('mongodb').MongoClient
 var assert = require('assert');
 
-var dbname          = 'location_data';
-var collectionName  = 'UWB_206i_run9';
+const {
+	Stitch,
+	RemoteMongoClient,
+	AnonymousCredential
+} = require('mongodb-stitch-browser-sdk');
+
+var dbname          = 'location_test';
+var collectionName  = 'test';
 var access 			= "mongodb+srv://jjlytle:test123@cluster0-suini.mongodb.net/test?retryWrites=true";
-var acesssLocal     = 'mongodb://localhost:27017/'+dbname;
+var accesssLocal     = 'mongodb://localhost:27017/'+dbname;
+var accessStitch	= 'mongodb://jjlytle:test123@stitch.mongodb.com:27020/?authMechanism=PLAIN&authSource=%24external&ssl=true&appName=location_service-pijqf:mongodb-atlas:local-userpass'
+var accessStitchApiKey	= 'mongodb://_:Wi3xMnfccjWFWbqoS6Gp8b32n8ORYv0FTs8S1Wc8j2VIaY6BAioc4saN0foDzCeZ@stitch.mongodb.com:27020/?authMechanism=PLAIN&authSource=%24external&ssl=true&appName=location_service-pijqf:mongodb-atlas:api-key'
 var filename        = './data/run1.csv';
 var timeNow 		= 1543835415241
 var timeDiv			= 50
-
+//Wi3xMnfccjWFWbqoS6Gp8b32n8ORYv0FTs8S1Wc8j2VIaY6BAioc4saN0foDzCeZ
+//Wi3xMnfccjWFWbqoS6Gp8b32n8ORYv0FTs8S1Wc8j2VIaY6BAioc4saN0foDzCeZ
 console.log('***************Process started');
+//const client = Stitch.initializeDefaultAppClient('location_service-ovtrc');
+
 
 MongoClient.connect(access, {useNewUrlParser : true}, function(err, client) {
 	if (err) {
@@ -69,3 +79,5 @@ let latLongToM = (num) => {
 let MtoLatLong = (num) => {
 	return (num/1000.0) * (90.0/10000.0)
 }
+
+

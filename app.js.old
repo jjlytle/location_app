@@ -1,86 +1,73 @@
-var fs = require('fs');
-var parse = require('csv-parse');
-var async = require('async');
-var inputFile='./data/run1.csv';
+
+
 var MongoClient = require('mongodb').MongoClient
 var assert = require('assert');
 
-// Connection FOR LOCAL server use first
-//var access = 'mongodb://localhost:27017/location_app';
-var access = "mongodb+srv://jjlytle:test123@cluster0-suini.mongodb.net/test?retryWrites=true";
+var dbname          = 'Beacon_data';
+var collectionName  = '206i_run1';
+var access 			= "mongodb+srv://jjlytle:test123@cluster0-suini.mongodb.net/test?retryWrites=true";
+var accesssLocal     = 'mongodb://localhost:27017/'+dbname;
+var accessStitch	= 'mongodb://jjlytle:test123@stitch.mongodb.com:27020/?authMechanism=PLAIN&authSource=%24external&ssl=true&appName=location_service-pijqf:mongodb-atlas:local-userpass'
+var accessStitchAPIKey	= 'mongodb://_:Qe4xD9Qkbidofv8vcTrVLYnfB14x5Q7Mbb5gwyyr9V7DTlveL68ho4rth4RMNxsS@stitch.mongodb.com:27020/?authMechanism=PLAIN&authSource=%24external&ssl=true&appName=location_service-pijqf:mongodb-atlas:api-key'
+var filename        = './data/run1.csv';
+var timeNow 		= 1543835415241
+var timeDiv			= 50
 
-MongoClient.connect(access, {useNewUrlParser : true}, function(err, client) {
-	if (err) throw err;
-	const collection = client.db("location_data").collection("table1");
-	var myobj = { name: "Cheif RedShirt", location: {type: "Point", coordinates: [40, 35]} };
-	collection.insertOne(myobj);
-	collection.createIndex({location : "2dsphere"}, function(err, res) {
-			if (err) throw err;
-			console.log("created index")
+console.log('***************Process started');
+
+MongoClient.connect(accessStitchAPIKey, {useNewUrlParser : true}, function(err, client) {
+	if (err) {
+		console.log('error on connection '+err);
+	}
+	else{
+		console.log('***************Successfully connected to mongodb');
+		const collection = client.db(dbname).collection(collectionName);
+		var fs          = require('fs');
+		var readline    = require('readline');
+		var stream      = require('stream');
+		var instream    = fs.createReadStream(filename);
+		var outstream   = new stream;
+		var rl          = readline.createInterface(instream,outstream);
+		var startLong   = -122.437608
+		var startLat    = 47.244769
+
+		console.log('***************Parsing, please wait ...');
+
+		rl.on('line',function(line){
+			try{
+				var arr         = line.split(',');
+				var myobj = 
+					{ 
+						name: "run1", 
+						time: timeNow+=timeDiv,
+						startingCoord: { type: "Point", coordinates: [startLong, startLat]},
+						location: { type: "Point", coordinates: gpsToFeet(startLong, startLat, arr[0], arr[1]) } 
+					};
+				collection.insertOne(myobj);
+			}
+			catch (err){
+				console.log(err);
+			}
 		});
 
-	client.close();
-});
-
-var promise1 = new Promise(function(resolve, reject) {
-	resolve(
-	MongoClient.connect(access, {useNewUrlParser : true}, 
-		function(err, client) 
-		{
-			if (err) throw err;
-			const collection = client.db("location_data").collection("table1");
-			var myobj = 
-				{ 
-				name: "Cheif RedShirt", 
-				location: {type: "Point", coordinates: } 
-				};
-			collection.insertOne(myobj);
-		client.close();
-		}
-	)
-	);
-});
-
-promise1.then(function(value) {
-	console.log(value);
-	// expected output: "Success!"
-});
-
-var parser = parse({delimiter: ','}, function (err, data) {
-	async.eachSeries(data, function (line, callback) {
-		promise1.then(function() {
-			console.log(line);
-			
-			callback();
+		rl.on('close',function(){
+			client.close();
+			console.log('***************completed');
 		});
-	})
+	}
 });
-fs.createReadStream(inputFile).pipe(parser);
 
-//var parser = parse({delimiter: ','}, function (err, data) {
-//	async.eachSeries(data, function (line, callback) {
-//		var myobj = { name: "Cheif RedShirt", location: {type: "Point", coordinates: [data[0], data[1]]} };
-//		collection.insertOne( myobj ).then(function() {
-//			console.log(data);
-//			console.log(line);
-//			callback();
-//		});
-//	})
-//});
-//fs.createReadStream(inputFile).pipe(parser);
-//
-//let gpsToFeet = (geoJSONobject) => {
-//	statements
-//}
-//
-//let latLongToKM = (num) => {
-//	return num * (10000/90)
-//}
-//
-//let KMtoFeet = (num) => {
-//	return geolib.convertUnit("ft", num*1000.0)
-//}
-//
-//let latLongToFeet = (num) => {
-//	return KMtoFeet(latLongToKM(num));
-//}
+let gpsToFeet = (long, lat, x, y) => {
+	let longLat = Object();
+	longLat[0] = long + ((x/1000)*(90/10000));
+	longLat[1] = lat + ((y/1000)*(90/10000));
+	return longLat;	
+}
+
+let latLongToM = (num) => {
+	return (num * (10000.0/90.0))*1000.0
+}
+
+let MtoLatLong = (num) => {
+	return (num/1000.0) * (90.0/10000.0)
+}
